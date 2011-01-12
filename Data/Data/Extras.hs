@@ -1,35 +1,38 @@
-{-# LANGUAGE Rank2Types, GeneralizedNewtypeDeriving, MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE Rank2Types, GeneralizedNewtypeDeriving, MultiParamTypeClasses, FlexibleInstances, TypeOperators #-}
 module Data.Data.Extras 
-  ( Data1(..)
+  ( 
+  -- * Data.Data
+  -- ** Kind: *
+    module Data.Data
+  -- ** Kind: * -> *
+  , Data1(..)
   , fromConstr1
   , fromConstrB1
   , fromConstrM1
+  -- ** Kind: * -> * -> *
+  , Data2(..)
   , fromConstr2
   , fromConstrB2
   , fromConstrM2
-  , module Data.Data
-  , WrappedData1(..)
-  , WrappedData2(..)
+  -- * Combinators
+  -- * Lifting @k@ in @'gfoldl'{n} k@
+  , liftK
+  , liftK2
+  -- * Lifting @f@ in @'gunfold'{n} f@
+  , liftF
+  , liftF2
   ) where
 
 import Data.Data
 import Data.Maybe
 import Control.Monad
+import Data.Eq.Type
 
 newtype ID x = ID { unID :: x }
 newtype CONST c a = CONST { unCONST :: c }
 data    Qi q a = Qi { _qiCount :: Int , unQi :: Maybe q } 
 newtype Qr r a = Qr { unQr  :: r -> r }
 newtype Mp m x = Mp { unMp :: m (x, Bool) }
-
-class Iso a b where
-  iso :: f a -> f b
-  osi :: f b -> f a
-
-instance Iso a a where
-  iso = id
-  osi = id
-
 
 class Typeable1 f => Data1 f where
   gfoldl1 :: Data a => (forall d b. Data d => c (d -> b) -> d -> c b) -> (forall g. g -> c g) -> f a -> c (f a)
@@ -209,7 +212,25 @@ instance Data2 (,) where
   dataTypeOf2 = dataTypeOf
   dataCast2_2 f = gcast2 f
 
-newtype WrappedData1 f a = WrapData1 { unwrapData1 :: f a } deriving (Iso (f a))
+
+-- horrible hackery
+newtype WrappedData1 f a = WrapData1 { _unwrapData1 :: f a } deriving (Iso (f a))
+class Iso a b where
+  iso :: f a -> f b
+  osi :: f b -> f a
+
+instance Iso a a where
+  iso = id
+  osi = id
+
+iso1 :: f a := WrappedData1 f a
+iso1 = Refl iso
+
+liftK :: (Data1 d1, Data a) => (forall d b. Data d => c (d -> b) -> d -> c b) -> c (d1 a -> b') -> d1 a -> c b'
+liftK k cf d = k (subst (lift2 iso1) cf) (WrapData1 d)
+
+liftF :: (Data1 b1, Data a) => (forall b r. Data b => c (b -> r) -> c r) -> c (b1 a -> r') -> c r'
+liftF f cf = f (subst (lift2 iso1) cf)
 
 data1 :: c (f a) -> c (WrappedData1 f a)
 data1 = iso 
@@ -233,7 +254,16 @@ instance (Data1 f, Data a) => Data (WrappedData1 f a) where
   toConstr (WrapData1 a) = toConstr1 a
   dataTypeOf (WrapData1 a) = dataTypeOf1 a
 
-newtype WrappedData2 f a b = WrapData2 { unwrapData2 :: f a b } deriving (Iso (f a b))
+newtype WrappedData2 f a b = WrapData2 { _unwrapData2 :: f a b } deriving (Iso (f a b))
+
+iso2 :: f a b := WrappedData2 f a b
+iso2 = Refl iso
+
+liftK2 :: (Data2 d2, Data a, Data x) => (forall d b. Data d => c (d -> b) -> d -> c b) -> c (d2 a x -> b') -> d2 a x -> c b'
+liftK2 k cf d = k (subst (lift2 iso2) cf) (WrapData2 d) 
+
+liftF2 :: (Data2 b2, Data a, Data x) => (forall b r. Data b => c (b -> r) -> c r) -> c (b2 a x -> r') -> c r'
+liftF2 f cf = f (subst (lift2 iso2) cf)
 
 data2 :: c (f a b) -> c (WrappedData2 f a b)
 data2 = iso 
