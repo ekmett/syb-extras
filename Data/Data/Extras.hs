@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE Rank2Types, GeneralizedNewtypeDeriving, MultiParamTypeClasses, FlexibleInstances #-}
 module Data.Data.Extras 
   ( Data1(..)
   , fromConstr1
@@ -8,6 +8,8 @@ module Data.Data.Extras
   , fromConstrB2
   , fromConstrM2
   , module Data.Data
+  , WrappedData1(..)
+  , WrappedData2(..)
   ) where
 
 import Data.Data
@@ -19,6 +21,15 @@ newtype CONST c a = CONST { unCONST :: c }
 data    Qi q a = Qi { _qiCount :: Int , unQi :: Maybe q } 
 newtype Qr r a = Qr { unQr  :: r -> r }
 newtype Mp m x = Mp { unMp :: m (x, Bool) }
+
+class Iso a b where
+  iso :: f a -> f b
+  osi :: f b -> f a
+
+instance Iso a a where
+  iso = id
+  osi = id
+
 
 class Typeable1 f => Data1 f where
   gfoldl1 :: Data a => (forall d b. Data d => c (d -> b) -> d -> c b) -> (forall g. g -> c g) -> f a -> c (f a)
@@ -115,6 +126,7 @@ instance Data a => Data1 ((,) a) where
   dataTypeOf1 = dataTypeOf
   dataCast1_1 f = gcast1 f
 
+
 class Typeable2 f => Data2 f where
   gfoldl2 :: (Data a, Data x) => (forall d b. Data d => c (d -> b) -> d -> c b) -> (forall g. g -> c g) -> f a x -> c (f a x)
   gfoldl2 _ z = z
@@ -196,3 +208,57 @@ instance Data2 (,) where
   gunfold2 = gunfold
   dataTypeOf2 = dataTypeOf
   dataCast2_2 f = gcast2 f
+
+newtype WrappedData1 f a = WrapData1 { unwrapData1 :: f a } deriving (Iso (f a))
+
+data1 :: c (f a) -> c (WrappedData1 f a)
+data1 = iso 
+
+undata1 :: c (WrappedData1 f a) -> c (f a)
+undata1 = osi
+
+instance Typeable1 f => Typeable1 (WrappedData1 f) where
+  typeOf1 (WrapData1 a) = typeOf1 a
+
+instance Data1 f => Data1 (WrappedData1 f) where
+  gfoldl1 k z (WrapData1 a) = data1 $ gfoldl1 k z a
+  gunfold1 k z c = undata1 $ gunfold1 k z c
+  toConstr1 (WrapData1 a) = toConstr1 a
+  dataTypeOf1 (WrapData1 a) = dataTypeOf1 a
+  
+-- these lie and let us convert instances
+instance (Data1 f, Data a) => Data (WrappedData1 f a) where
+  gfoldl k z (WrapData1 a) = data1 $ gfoldl1 k z a
+  gunfold k z c = undata1 $ gunfold1 k z c
+  toConstr (WrapData1 a) = toConstr1 a
+  dataTypeOf (WrapData1 a) = dataTypeOf1 a
+
+newtype WrappedData2 f a b = WrapData2 { unwrapData2 :: f a b } deriving (Iso (f a b))
+
+data2 :: c (f a b) -> c (WrappedData2 f a b)
+data2 = iso 
+
+undata2 :: c (WrappedData2 f a b) -> c (f a b)
+undata2 = osi
+
+instance Typeable2 f => Typeable2 (WrappedData2 f) where
+  typeOf2 (WrapData2 a) = typeOf2 a
+
+instance Data2 f => Data2 (WrappedData2 f) where
+  gfoldl2 k z (WrapData2 a) = data2 $ gfoldl2 k z a
+  gunfold2 k z c = undata2 $ gunfold1 k z c
+  toConstr2 (WrapData2 a) = toConstr2 a
+  dataTypeOf2 (WrapData2 a) = dataTypeOf2 a
+
+instance (Data2 f, Data a) => Data1 (WrappedData2 f a) where
+  gfoldl1 k z (WrapData2 a) = data2 $ gfoldl2 k z a
+  gunfold1 k z c = undata2 $ gunfold2 k z c
+  toConstr1 (WrapData2 a) = toConstr2 a
+  dataTypeOf1 (WrapData2 a) = dataTypeOf2 a
+  
+-- these lie and let us convert instances
+instance (Data2 f, Data a, Data b) => Data (WrappedData2 f a b) where
+  gfoldl k z (WrapData2 a) = data2 $ gfoldl2 k z a
+  gunfold k z c = undata2 $ gunfold2 k z c
+  toConstr (WrapData2 a) = toConstr2 a
+  dataTypeOf (WrapData2 a) = dataTypeOf2 a
