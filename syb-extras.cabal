@@ -1,6 +1,6 @@
 name:          syb-extras
 category:      Polymorphism, Combinators, Generic
-version:       0.2.1.1
+version:       0.2.2
 license:       BSD3
 cabal-version: >= 1.6
 license-file:  LICENSE
@@ -18,14 +18,14 @@ source-repository head
   location: git://github.com/ekmett/syb-extras.git
 
 library
-  build-depends: 
-    base >= 4 && < 5,
+  build-depends:
+    base           >= 4 && < 5,
     prelude-extras >= 0.1 && < 0.3,
-    eq >= 0.3.2 && <= 0.4
+    eq             >= 0.3.6 && <= 0.4
 
   extensions: CPP
 
-  ghc-options: -Wall 
+  ghc-options: -Wall
 
   exposed-modules:
     Data.Data.Extras
