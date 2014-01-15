@@ -1,6 +1,6 @@
 {-# LANGUAGE Rank2Types, GeneralizedNewtypeDeriving, MultiParamTypeClasses, FlexibleInstances, TypeOperators #-}
-module Data.Data.Extras 
-  ( 
+module Data.Data.Extras
+  (
   -- * Data.Data
   -- ** Kind: *
     module Data.Data
@@ -30,7 +30,7 @@ import Data.Eq.Type
 
 newtype ID x = ID { unID :: x }
 newtype CONST c a = CONST { unCONST :: c }
-data    Qi q a = Qi { _qiCount :: Int , unQi :: Maybe q } 
+data    Qi q a = Qi { _qiCount :: Int , unQi :: Maybe q }
 newtype Qr r a = Qr { unQr  :: r -> r }
 newtype Mp m x = Mp { unMp :: m (x, Bool) }
 
@@ -50,7 +50,7 @@ class Typeable1 f => Data1 f where
   dataCast2_1 :: (Typeable2 t, Data a) => (forall d e. (Data d, Data e) => c (t d e)) -> Maybe (c (f a))
   dataCast2_1 _ = Nothing
 
-  gmapT1 :: Data a => (forall b. Data b => b -> b) -> f a -> f a 
+  gmapT1 :: Data a => (forall b. Data b => b -> b) -> f a -> f a
   gmapT1 f x0 = unID (gfoldl1 (\(ID c) x -> ID (c (f x))) ID x0)
 
   gmapQl1 :: Data a => (r -> r' -> r) -> r -> (forall d. Data d => d -> r') -> f a -> r
@@ -64,12 +64,12 @@ class Typeable1 f => Data1 f where
 
   gmapQi1 :: Data a => Int -> (forall d. Data d => d -> u) -> f a -> u
   gmapQi1 i f x = fromJust $ unQi $ gfoldl1 (\(Qi i' q) a -> Qi (i'+1) (if i==i' then Just (f a) else q))
-                                            (\_ -> Qi 0 Nothing) 
+                                            (\_ -> Qi 0 Nothing)
                                             x
-  
+
   gmapM1 :: (Monad m, Data a) => (forall d. Data d => d -> m d) -> f a -> m (f a)
   gmapM1 f = gfoldl1 (\c x -> do c' <- c; liftM c' (f x)) return
-  
+
   gmapMp1 :: (MonadPlus m, Data a) => (forall d. Data d => d -> m d) -> f a -> m (f a)
   gmapMp1 f x = unMp (gfoldl1 k z x) >>= \(x',b) ->
                 if b then return x' else mzero
@@ -92,7 +92,7 @@ class Typeable1 f => Data1 f where
                         else (f y >>= \y' -> return (h y',True))
                              `mplus` return (h y, b)
              )
-  
+
 
 fromConstr1 :: (Data1 f, Data a) => Constr -> f a
 fromConstr1 = fromConstrB1 undefined
@@ -109,7 +109,7 @@ instance Data1 [] where
   gunfold1 = gunfold
   dataTypeOf1 = dataTypeOf
   dataCast1_1 f = gcast1 f
-  
+
 instance Data1 Maybe where
   gfoldl1 = gfoldl
   toConstr1 = toConstr
@@ -160,12 +160,12 @@ class Typeable2 f => Data2 f where
 
   gmapQi2 :: (Data a, Data x) => Int -> (forall d. Data d => d -> u) -> f a x -> u
   gmapQi2 i f x = fromJust $ unQi $ gfoldl2 (\(Qi i' q) a -> Qi (i'+2) (if i==i' then Just (f a) else q))
-                                            (\_ -> Qi 0 Nothing) 
+                                            (\_ -> Qi 0 Nothing)
                                             x
-  
+
   gmapM2 :: (Monad m, Data a, Data x) => (forall d. Data d => d -> m d) -> f a x -> m (f a x)
   gmapM2 f = gfoldl2 (\c x -> do c' <- c; liftM c' (f x)) return
-  
+
   gmapMp2 :: (MonadPlus m, Data a, Data x) => (forall d. Data d => d -> m d) -> f a x -> m (f a x)
   gmapMp2 f x = unMp (gfoldl2 k z x) >>= \(x',b) ->
                 if b then return x' else mzero
@@ -188,7 +188,7 @@ class Typeable2 f => Data2 f where
                         else (f y >>= \y' -> return (h y',True))
                              `mplus` return (h y, b)
              )
-  
+
 fromConstr2 :: (Data2 f, Data a, Data x) => Constr -> f a x
 fromConstr2 = fromConstrB2 undefined
 
@@ -233,7 +233,7 @@ liftF :: (Data1 b1, Data a) => (forall b r. Data b => c (b -> r) -> c r) -> c (b
 liftF f cf = f (subst (lift2 iso1) cf)
 
 data1 :: c (f a) -> c (WrappedData1 f a)
-data1 = iso 
+data1 = iso
 
 undata1 :: c (WrappedData1 f a) -> c (f a)
 undata1 = osi
@@ -246,7 +246,7 @@ instance Data1 f => Data1 (WrappedData1 f) where
   gunfold1 k z c = undata1 $ gunfold1 k z c
   toConstr1 (WrapData1 a) = toConstr1 a
   dataTypeOf1 (WrapData1 a) = dataTypeOf1 a
-  
+
 -- these lie and let us convert instances
 instance (Data1 f, Data a) => Data (WrappedData1 f a) where
   gfoldl k z (WrapData1 a) = data1 $ gfoldl1 k z a
@@ -260,13 +260,13 @@ iso2 :: f a b := WrappedData2 f a b
 iso2 = Refl iso
 
 liftK2 :: (Data2 d2, Data a, Data x) => (forall d b. Data d => c (d -> b) -> d -> c b) -> c (d2 a x -> b') -> d2 a x -> c b'
-liftK2 k cf d = k (subst (lift2 iso2) cf) (WrapData2 d) 
+liftK2 k cf d = k (subst (lift2 iso2) cf) (WrapData2 d)
 
 liftF2 :: (Data2 b2, Data a, Data x) => (forall b r. Data b => c (b -> r) -> c r) -> c (b2 a x -> r') -> c r'
 liftF2 f cf = f (subst (lift2 iso2) cf)
 
 data2 :: c (f a b) -> c (WrappedData2 f a b)
-data2 = iso 
+data2 = iso
 
 undata2 :: c (WrappedData2 f a b) -> c (f a b)
 undata2 = osi
@@ -285,7 +285,7 @@ instance (Data2 f, Data a) => Data1 (WrappedData2 f a) where
   gunfold1 k z c = undata2 $ gunfold2 k z c
   toConstr1 (WrapData2 a) = toConstr2 a
   dataTypeOf1 (WrapData2 a) = dataTypeOf2 a
-  
+
 -- these lie and let us convert instances
 instance (Data2 f, Data a, Data b) => Data (WrappedData2 f a b) where
   gfoldl k z (WrapData2 a) = data2 $ gfoldl2 k z a
