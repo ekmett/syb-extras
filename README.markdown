@@ -1,7 +1,7 @@
 syb-extras
 ==========
 
-[![Build Status](https://secure.travis-ci.org/ekmett/syb-extras.png?branch=master)](http://travis-ci.org/ekmett/syb-extras)
+[![Hackage](https://img.shields.io/hackage/v/syb-extras.svg)](https://hackage.haskell.org/package/syb-extras) [![Build Status](https://secure.travis-ci.org/ekmett/syb-extras.png?branch=master)](http://travis-ci.org/ekmett/syb-extras
 
 This permits the construction of higher-rank `Data` instances.
 
